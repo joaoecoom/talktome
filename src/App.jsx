@@ -5,6 +5,7 @@ import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { formatText, translateText, formatAndTranslate } from './services/aiService';
 
 const LANGUAGES = [
+  { code: 'en', label: 'English' },
   { code: 'es', label: 'Spanish' },
   { code: 'pt', label: 'Portuguese' },
   { code: 'fr', label: 'French' },
