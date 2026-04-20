@@ -3,10 +3,7 @@ import { getUserFromRequest } from './_lib/auth.js';
 import { ensureSchema, sql } from './_lib/db.js';
 import { readJsonBody, sendJson } from './_lib/http.js';
 
-const OPENROUTER_API_KEY =
-  process.env.OPENROUTER_API_KEY ||
-  process.env.VITE_OPENROUTER_API_KEY ||
-  '';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_APP_NAME = process.env.OPENROUTER_APP_NAME || 'Talk To Me';
 const OPENROUTER_APP_URL = process.env.OPENROUTER_APP_URL || 'https://talktome-ruby.vercel.app';
