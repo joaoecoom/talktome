@@ -45,6 +45,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [inputCopied, setInputCopied] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
   const finalTranscriptRef = useRef('');
 
   const handleSpeechResult = useCallback(({ final, interim }) => {
@@ -72,6 +74,23 @@ export default function App() {
     }
   }, [speechError]);
 
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return undefined;
+
+    setNow(Date.now());
+    const intervalId = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime >= cooldownUntil) {
+        setCooldownUntil(0);
+        setError(null);
+        setStatus(prev => prev === 'error' ? 'idle' : prev);
+      }
+    }, 500);
+
+    return () => clearInterval(intervalId);
+  }, [cooldownUntil]);
+
   const handleToggleRecord = () => {
     if (isListening) {
       stopListening();
@@ -88,10 +107,11 @@ export default function App() {
   };
 
   const handleProcess = async () => {
+    if (status === 'processing') return;
     const text = inputText.trim();
     if (!text) return;
     if (!HAS_API_KEY) {
-      setError('No API key found. Please add your OpenAI key as VITE_OPENAI_API_KEY in the .env file.');
+      setError('No API key found. Please add your OpenRouter key as VITE_OPENROUTER_API_KEY in the .env file.');
       return;
     }
 
@@ -100,7 +120,8 @@ export default function App() {
     try {
       let result = '';
       if (autoFormat && translate) {
-        result = await formatAndTranslate(text, LANGUAGES.find(l => l.code === targetLang)?.label || targetLang);
+        const languageLabel = LANGUAGES.find(l => l.code === targetLang)?.label || targetLang;
+        result = await formatAndTranslate(text, languageLabel);
       } else if (autoFormat) {
         result = await formatText(text);
       } else if (translate) {
@@ -111,7 +132,14 @@ export default function App() {
       setOutputText(result);
       setStatus('done');
     } catch (err) {
-      setError(err.message || 'An error occurred during processing.');
+      if (err?.status === 429 || String(err?.message || '').includes('429')) {
+        const cooldownMs = err?.retryAfterMs || 12000;
+        const retryInSeconds = Math.ceil(cooldownMs / 1000);
+        setCooldownUntil(Date.now() + cooldownMs);
+        setError(`Rate limit reached. Please wait ${retryInSeconds}s and try again.`);
+      } else {
+        setError(err.message || 'An error occurred during processing.');
+      }
       setStatus('error');
     }
   };
@@ -153,9 +181,12 @@ export default function App() {
   }[status];
 
   const displayedInput = inputText + (interimText ? (inputText ? ' ' : '') + interimText : '');
+  const isCoolingDown = cooldownUntil > now;
+  const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
+  const canProcess = !!inputText.trim() && status !== 'processing' && (autoFormat || translate) && !isCoolingDown;
 
   return (
-    <div className="app">
+    <div className="app" translate="no">
       {/* Header */}
       <header className="header">
         <div className="header-logo">
@@ -294,11 +325,28 @@ export default function App() {
             id="process-btn"
             className={`process-btn ${status === 'processing' ? 'processing' : ''}`}
             onClick={handleProcess}
-            disabled={!inputText.trim() || status === 'processing' || (!autoFormat && !translate)}
+            disabled={!canProcess}
           >
             {status === 'processing'
-              ? <><span className="spin">⚙</span> Processing…</>
-              : <>✨ Process</>
+              ? (
+                <>
+                  <span className="spin" aria-hidden="true">⚙</span>
+                  <span>Processing…</span>
+                </>
+              )
+              : isCoolingDown
+                ? (
+                  <>
+                    <span aria-hidden="true">⏳</span>
+                    <span>Try again in {cooldownSeconds}s</span>
+                  </>
+                )
+              : (
+                <>
+                  <span aria-hidden="true">✨</span>
+                  <span>Process</span>
+                </>
+              )
             }
           </button>
         </div>
@@ -335,6 +383,12 @@ export default function App() {
               id="input-textarea"
               className={`panel-textarea ${interimText && !inputText ? 'interim' : ''}`}
               value={displayedInput}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (canProcess) handleProcess();
+                }
+              }}
               onChange={e => {
                 setInputText(e.target.value);
                 finalTranscriptRef.current = e.target.value;
