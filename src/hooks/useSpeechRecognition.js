@@ -4,15 +4,24 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 export function useSpeechRecognition({ onResult, onEnd }) {
   const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(!!SpeechRecognition);
+  const [isSupported] = useState(() => !!SpeechRecognition);
   const [error, setError] = useState(null);
   const recognitionRef = useRef(null);
   const isManuallyStopped = useRef(false);
   const interimRef = useRef('');
+  const onResultRef = useRef(onResult);
+  const onEndRef = useRef(onEnd);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
+
+  useEffect(() => {
+    onEndRef.current = onEnd;
+  }, [onEnd]);
 
   useEffect(() => {
     if (!SpeechRecognition) {
-      setIsSupported(false);
       return;
     }
 
@@ -41,8 +50,8 @@ export function useSpeechRecognition({ onResult, onEnd }) {
         }
       }
 
-      if (onResult) {
-        onResult({ final: finalTranscript, interim: interimTranscript });
+      if (onResultRef.current) {
+        onResultRef.current({ final: finalTranscript, interim: interimTranscript });
       }
     };
 
@@ -60,7 +69,7 @@ export function useSpeechRecognition({ onResult, onEnd }) {
       if (!isManuallyStopped.current) {
         // Auto-restart if wasn't stopped intentionally
       }
-      if (onEnd) onEnd();
+      if (onEndRef.current) onEndRef.current();
     };
 
     recognitionRef.current = recognition;
