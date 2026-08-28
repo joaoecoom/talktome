@@ -14,7 +14,7 @@
 
 - [React + Vite](https://vitejs.dev/)
 - [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
-- [OpenRouter](https://openrouter.ai) (default model: `google/gemini-2.0-flash-001`)
+- [Groq](https://groq.com) (default model: `openai/gpt-oss-20b`)
 
 ## Quick Start
 
@@ -22,8 +22,8 @@
 # 1. Install dependencies
 npm install
 
-# 2. Add your OpenRouter API key
-echo "VITE_OPENROUTER_API_KEY=sk-or-..." > .env
+# 2. Add your Groq API key (server-side only)
+echo "GROQ_API_KEY=gsk_..." >> .env.local
 
 # 3. Run locally
 npm run dev
@@ -35,13 +35,13 @@ Open [http://localhost:5173](http://localhost:5173)
 
 | Variable | Description |
 |---|---|
-| `VITE_OPENROUTER_API_KEY` | Your OpenRouter API key — get one free at [openrouter.ai](https://openrouter.ai) |
+| `GROQ_API_KEY` | Your Groq API key — get one free at [console.groq.com](https://console.groq.com/keys) |
 
 ## Deploy to Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-Add `VITE_OPENROUTER_API_KEY` as an environment variable in your Vercel project settings.
+Add `GROQ_API_KEY` as an environment variable in your Vercel project settings.
 
 ## Browser Support
 

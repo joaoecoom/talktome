@@ -3,13 +3,11 @@ import { getUserFromRequest } from './_lib/auth.js';
 import { ensureSchema, sql } from './_lib/db.js';
 import { readJsonBody, sendJson } from './_lib/http.js';
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_APP_NAME = process.env.OPENROUTER_APP_NAME || 'Talk To Me';
-const OPENROUTER_APP_URL = process.env.OPENROUTER_APP_URL || 'https://talktome-ruby.vercel.app';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_CANDIDATES = (
-  process.env.OPENROUTER_MODELS ||
-  'meta-llama/llama-3.1-8b-instruct,openai/gpt-4o-mini'
+  process.env.GROQ_MODELS ||
+  'openai/gpt-oss-20b,openai/gpt-oss-120b'
 )
   .split(',')
   .map((model) => model.trim())
@@ -34,26 +32,22 @@ async function callSingleModel(model, systemPrompt, trimmedContent) {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(GROQ_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': OPENROUTER_APP_URL,
-        'X-Title': OPENROUTER_APP_NAME,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
       },
       signal: controller.signal,
       body: JSON.stringify({
         model,
-        provider: {
-          allow_fallbacks: false,
-        },
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: trimmedContent },
         ],
         temperature: 0.1,
-        max_tokens: 220,
+        max_tokens: 400,
+        reasoning_effort: 'low',
       }),
     });
 
@@ -87,9 +81,9 @@ async function callSingleModel(model, systemPrompt, trimmedContent) {
   }
 }
 
-async function callOpenRouter(systemPrompt, userContent) {
-  if (!OPENROUTER_API_KEY) {
-    const error = new Error('OpenRouter API key is missing on the server.');
+async function callGroq(systemPrompt, userContent) {
+  if (!GROQ_API_KEY) {
+    const error = new Error('Groq API key is missing on the server.');
     error.status = 500;
     throw error;
   }
@@ -144,7 +138,7 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Invalid processing action.' });
     }
 
-    const result = await callOpenRouter(getPrompt(action, targetLanguage), text);
+    const result = await callGroq(getPrompt(action, targetLanguage), text);
 
     await sql`
       insert into usage_logs (user_id, action, input_chars)

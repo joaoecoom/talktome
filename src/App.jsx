@@ -386,7 +386,7 @@ export default function App() {
             )}
 
             <div className="api-notice">
-              <strong>🔐 Protected mode</strong> keeps OpenRouter on the server so only logged-in users can trigger AI requests.
+              <strong>🔐 Protected mode</strong> keeps Groq on the server so only logged-in users can trigger AI requests.
             </div>
 
             <div className="options-bar">
