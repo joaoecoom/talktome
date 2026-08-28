@@ -461,7 +461,6 @@ export default function App() {
                 aria-label={`Replace language with ${languageLabel(previousTargetLang)}`}
               >
                 <span aria-hidden="true">⇄</span>
-                <span>Replace</span>
               </button>
 
               <button
