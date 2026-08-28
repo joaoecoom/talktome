@@ -32,6 +32,10 @@ const SPEECH_LANGS = [
   { code: 'ar-SA', label: '🇸🇦 Arabic' },
 ];
 
+function languageLabel(code) {
+  return LANGUAGES.find(l => l.code === code)?.label || code;
+}
+
 export default function App() {
   const [authState, setAuthState] = useState('checking');
   const [currentUser, setCurrentUser] = useState(null);
@@ -45,6 +49,7 @@ export default function App() {
   const [autoFormat, setAutoFormat] = useState(true);
   const [translate, setTranslate] = useState(false);
   const [targetLang, setTargetLang] = useState('es');
+  const [previousTargetLang, setPreviousTargetLang] = useState('en');
   const [speechLang, setSpeechLang] = useState('en-US');
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -177,12 +182,11 @@ export default function App() {
     try {
       let result = '';
       if (autoFormat && translate) {
-        const languageLabel = LANGUAGES.find(l => l.code === targetLang)?.label || targetLang;
-        result = await formatAndTranslate(text, languageLabel);
+        result = await formatAndTranslate(text, languageLabel(targetLang));
       } else if (autoFormat) {
         result = await formatText(text);
       } else if (translate) {
-        result = await translateText(text, LANGUAGES.find(l => l.code === targetLang)?.label || targetLang);
+        result = await translateText(text, languageLabel(targetLang));
       } else {
         result = text;
       }
@@ -226,6 +230,19 @@ export default function App() {
     setOutputText('');
     setStatus('idle');
     setError(null);
+  };
+
+  const handleTargetLangChange = (nextLang) => {
+    if (nextLang === targetLang) return;
+    setPreviousTargetLang(targetLang);
+    setTargetLang(nextLang);
+  };
+
+  const handleReplaceTargetLang = () => {
+    if (!previousTargetLang || previousTargetLang === targetLang) return;
+    const currentLang = targetLang;
+    setTargetLang(previousTargetLang);
+    setPreviousTargetLang(currentLang);
   };
 
   const statusLabel = {
@@ -423,7 +440,7 @@ export default function App() {
                 <select
                   className="lang-select"
                   value={targetLang}
-                  onChange={e => setTargetLang(e.target.value)}
+                  onChange={e => handleTargetLangChange(e.target.value)}
                   disabled={!translate}
                   aria-label="Target translation language"
                 >
@@ -434,6 +451,18 @@ export default function App() {
               </div>
 
               <div className="divider" />
+
+              <button
+                type="button"
+                className="replace-lang-btn"
+                onClick={handleReplaceTargetLang}
+                disabled={!translate || !previousTargetLang || previousTargetLang === targetLang}
+                title={`Replace with ${languageLabel(previousTargetLang)}`}
+                aria-label={`Replace language with ${languageLabel(previousTargetLang)}`}
+              >
+                <span aria-hidden="true">⇄</span>
+                <span>Replace</span>
+              </button>
 
               <button
                 id="process-btn"
